@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
+from pathlib import Path
 
 sns.set(style="whitegrid")
 
@@ -10,7 +11,8 @@ st.set_page_config(
     layout="wide"
 )
 
-hour_bike = pd.read_csv("main_data.csv")
+data_path = Path(__file__).parent / "main_data.csv"
+hour_bike = pd.read_csv(data_path)
 hour_bike["dteday"] = pd.to_datetime(hour_bike["dteday"])
 
 st.sidebar.header("Filter Data")
