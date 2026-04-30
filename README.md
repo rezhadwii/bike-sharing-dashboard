@@ -1,14 +1,15 @@
-# Bike Sharing Dashboard
+# Bike Sharing Dashboard 
 
-## Deskripsi
+## Setup Environment - Anaconda
+conda create --name main-ds python=3.9
+conda activate main-ds
+pip install -r requirements.txt
 
-Proyek ini berisi analisis Bike Sharing Dataset dan dashboard sederhana menggunakan Streamlit.
-
-## Setup Environment
-
+## Setup Environment - Shell/Terminal
+pip install pipenv
+pipenv shell
 pip install -r requirements.txt
 
 ## Run Streamlit App
-
 cd dashboard
-streamlit run dashboard.py
+streamlit run dashboard.py 

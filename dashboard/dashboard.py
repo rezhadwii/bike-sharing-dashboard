@@ -32,10 +32,19 @@ main_df = hour_bike[
     (hour_bike["dteday"] <= pd.to_datetime(end_date))
 ]
 
-st.title("Dashboard Penyewaan Sepeda")
+st.title("Bike Sharing Dashboard")
+
 st.write(
-    "Dashboard ini menampilkan pola penyewaan sepeda berdasarkan bulan, musim, cuaca, jam, dan level demand."
+    """
+    Dashboard ini menyajikan hasil analisis penyewaan sepeda berdasarkan tren bulanan,
+    musim, kondisi cuaca, jam, dan tipe hari. Analisis ini bertujuan untuk membantu
+    memahami pola permintaan pengguna serta menentukan waktu prioritas penyediaan sepeda.
+    """
 )
+
+st.divider()
+
+st.subheader("Ringkasan Data")
 
 total_rentals = main_df["cnt"].sum()
 avg_rentals = round(main_df["cnt"].mean(), 2)
@@ -56,89 +65,173 @@ with col3:
 with col4:
     st.metric("Pengguna Casual", value=f"{total_casual:,}")
 
-st.subheader("Total Penyewaan Sepeda per Bulan")
+st.divider()
 
-monthly_rentals = main_df.resample(rule="ME", on="dteday").agg({
+
+st.subheader("Pertanyaan 1")
+st.markdown(
+    "**Bagaimana perbandingan tren total penyewaan sepeda setiap bulan antara tahun 2011 dan 2012, serta pada bulan apa terjadi penyewaan tertinggi dan terendah?**"
+)
+
+month_order = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+]
+
+monthly_yearly_rentals = main_df.groupby(["yr", "mnth"], as_index=False).agg({
     "cnt": "sum"
-}).reset_index()
+})
 
-monthly_rentals["month_year"] = monthly_rentals["dteday"].dt.strftime("%b %Y")
+monthly_yearly_rentals["mnth"] = pd.Categorical(
+    monthly_yearly_rentals["mnth"],
+    categories=month_order,
+    ordered=True
+)
+
+monthly_yearly_rentals = monthly_yearly_rentals.sort_values(["yr", "mnth"])
 
 fig, ax = plt.subplots(figsize=(14, 6))
 sns.lineplot(
-    data=monthly_rentals,
-    x="month_year",
+    data=monthly_yearly_rentals,
+    x="mnth",
     y="cnt",
+    hue="yr",
     marker="o",
+    palette=["tab:blue", "tab:orange"],
     ax=ax
 )
 
-ax.set_title("Total Penyewaan Sepeda per Bulan Tahun 2011-2012")
+ax.set_title("Perbandingan Total Penyewaan Sepeda per Bulan antara Tahun 2011 dan 2012")
 ax.set_xlabel("Bulan")
 ax.set_ylabel("Total Penyewaan")
 ax.tick_params(axis="x", rotation=45)
+ax.legend(title="Tahun")
 st.pyplot(fig)
 
-st.subheader("Rata-rata Penyewaan berdasarkan Musim dan Kondisi Cuaca")
+st.info(
+    "Total penyewaan sepeda pada tahun 2012 lebih tinggi dibandingkan tahun 2011 di setiap bulan. "
+    "Puncak penyewaan terjadi pada September 2012, sedangkan penyewaan terendah terjadi pada Januari 2011."
+)
 
-season_rentals = main_df.groupby("season", as_index=False).agg({
+st.divider()
+
+
+st.subheader("Pertanyaan 2")
+st.markdown(
+    "**Bagaimana perbedaan rata-rata penyewaan sepeda pada berbagai musim dan kondisi cuaca antara tahun 2011 dan 2012?**"
+)
+
+season_order = ["Spring", "Summer", "Fall", "Winter"]
+weather_order = ["Clear", "Mist/Cloudy", "Light Rain/Snow", "Heavy Rain/Snow"]
+
+season_year_rentals = main_df.groupby(["yr", "season"], as_index=False).agg({
     "cnt": "mean"
 })
 
-weather_rentals = main_df.groupby("weathersit", as_index=False).agg({
+weather_year_rentals = main_df.groupby(["yr", "weathersit"], as_index=False).agg({
     "cnt": "mean"
 })
+
+season_year_rentals["season"] = pd.Categorical(
+    season_year_rentals["season"],
+    categories=season_order,
+    ordered=True
+)
+
+weather_year_rentals["weathersit"] = pd.Categorical(
+    weather_year_rentals["weathersit"],
+    categories=weather_order,
+    ordered=True
+)
+
+season_year_rentals = season_year_rentals.sort_values(["season", "yr"])
+weather_year_rentals = weather_year_rentals.sort_values(["weathersit", "yr"])
 
 fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(16, 6))
 
 sns.barplot(
-    data=season_rentals.sort_values(by="cnt", ascending=False),
+    data=season_year_rentals,
     x="season",
     y="cnt",
+    hue="yr",
+    palette=["tab:blue", "tab:orange"],
     ax=ax[0]
 )
+
 ax[0].set_title("Rata-rata Penyewaan berdasarkan Musim")
 ax[0].set_xlabel("Musim")
 ax[0].set_ylabel("Rata-rata Penyewaan")
+ax[0].legend(title="Tahun")
 
 sns.barplot(
-    data=weather_rentals.sort_values(by="cnt", ascending=False),
+    data=weather_year_rentals,
     x="weathersit",
     y="cnt",
+    hue="yr",
+    palette=["tab:blue", "tab:orange"],
     ax=ax[1]
 )
+
 ax[1].set_title("Rata-rata Penyewaan berdasarkan Kondisi Cuaca")
 ax[1].set_xlabel("Kondisi Cuaca")
 ax[1].set_ylabel("Rata-rata Penyewaan")
-ax[1].tick_params(axis="x", rotation=20)
+ax[1].legend(title="Tahun")
 
 plt.tight_layout()
 st.pyplot(fig)
 
-st.subheader("Rata-rata Penyewaan Sepeda berdasarkan Jam")
+st.info(
+    "Rata-rata penyewaan sepeda pada tahun 2012 cenderung lebih tinggi dibandingkan tahun 2011. "
+    "Penyewaan tertinggi terjadi pada musim Fall dan saat cuaca Clear, sedangkan terendah terjadi pada musim Spring dan saat Heavy Rain/Snow."
+)
 
-hourly_rentals = main_df.groupby("hr", as_index=False).agg({
+st.divider()
+
+
+st.subheader("Pertanyaan 3")
+st.markdown(
+    "**Bagaimana perbedaan pola rata-rata penyewaan sepeda per jam antara Working Day dan Non-Working Day selama tahun 2011–2012?**"
+)
+
+hourly_workingday = main_df.groupby(["hr", "workingday"], as_index=False).agg({
     "cnt": "mean"
 })
 
 fig, ax = plt.subplots(figsize=(12, 6))
 sns.lineplot(
-    data=hourly_rentals,
+    data=hourly_workingday,
     x="hr",
     y="cnt",
+    hue="workingday",
     marker="o",
     ax=ax
 )
 
-ax.set_title("Rata-rata Penyewaan Sepeda berdasarkan Jam")
+ax.set_title("Rata-rata Penyewaan Sepeda per Jam berdasarkan Tipe Hari")
 ax.set_xlabel("Jam")
 ax.set_ylabel("Rata-rata Penyewaan")
 ax.set_xticks(range(0, 24))
+ax.legend(title="Tipe Hari")
 st.pyplot(fig)
 
-st.subheader("Level Demand Penyewaan Sepeda berdasarkan Jam")
+st.info(
+    "Pada Working Day, penyewaan meningkat pada jam 08.00 serta 17.00–18.00. "
+    "Pada Non-Working Day, penyewaan lebih banyak terjadi pada siang hingga sore hari."
+)
 
-hourly_demand = main_df.groupby("hr", as_index=False).agg({
+st.divider()
+
+
+st.subheader("Analisis Lanjutan: Pengelompokan Level Demand")
+
+st.write(
+    """
+    Pada bagian ini, rata-rata penyewaan sepeda dikelompokkan menjadi Low Demand,
+    Medium Demand, dan High Demand berdasarkan jam dan tipe hari.
+    """
+)
+
+demand_by_hour_day = main_df.groupby(["workingday", "hr"], as_index=False).agg({
     "cnt": "mean"
 })
 
@@ -150,34 +243,45 @@ def demand_level(avg_rentals):
     else:
         return "High Demand"
 
-hourly_demand["demand_level"] = hourly_demand["cnt"].apply(demand_level)
+demand_by_hour_day["demand_level"] = demand_by_hour_day["cnt"].apply(demand_level)
 
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.barplot(
-    data=hourly_demand,
+g = sns.catplot(
+    data=demand_by_hour_day,
     x="hr",
     y="cnt",
     hue="demand_level",
-    ax=ax
+    col="workingday",
+    kind="bar",
+    height=5,
+    aspect=1.3,
+    palette=["tab:blue", "tab:orange", "tab:green"]
 )
 
-ax.set_title("Level Demand Penyewaan Sepeda berdasarkan Jam")
-ax.set_xlabel("Jam")
-ax.set_ylabel("Rata-rata Penyewaan")
-ax.set_xticks(range(0, 24))
-ax.legend(title="Level Demand")
-st.pyplot(fig)
+g.set_axis_labels("Jam", "Rata-rata Penyewaan")
+g.set_titles("{col_name}")
+g.fig.suptitle("Pengelompokan Level Demand Penyewaan Sepeda berdasarkan Jam dan Tipe Hari", y=1.05)
 
-st.subheader("Ringkasan Insight")
+st.pyplot(g.fig)
 
-st.write(
+st.success(
+    "Hasil pengelompokan demand dapat membantu menentukan waktu prioritas penyediaan sepeda "
+    "dan waktu yang lebih tepat untuk pengecekan atau penataan ulang unit sepeda."
+)
+
+st.divider()
+
+
+st.subheader("Kesimpulan Utama")
+
+st.markdown(
     """
-    - Penyewaan sepeda pada tahun 2012 cenderung lebih tinggi dibandingkan tahun 2011.
-    - Rata-rata penyewaan tertinggi terjadi pada musim Fall dan saat cuaca Clear.
-    - Penyewaan sepeda ramai pada pagi hari sekitar jam 08.00 dan sore hari sekitar jam 17.00.
-    - Jam dengan kategori High Demand dapat menjadi prioritas untuk menjaga ketersediaan sepeda.
+    - Total penyewaan sepeda pada tahun 2012 lebih tinggi dibandingkan tahun 2011 di setiap bulan.
+    - Rata-rata penyewaan sepeda pada tahun 2012 cenderung lebih tinggi dibandingkan tahun 2011 pada berbagai musim dan kondisi cuaca.
+    - Musim Fall dan cuaca Clear memiliki rata-rata penyewaan yang tinggi.
+    - Pada Working Day, penyewaan meningkat pada pagi dan sore hari.
+    - Pada Non-Working Day, penyewaan lebih banyak terjadi pada siang hingga sore hari.
+    - Periode Low Demand dapat dimanfaatkan untuk pengecekan kondisi sepeda dan penataan ulang unit sepeda.
     """
 )
 
-st.caption("Bike Sharing Dashboard")
-
+st.caption("Bike Sharing Dashboard | Proyek Analisis Data")
